@@ -1,3 +1,8 @@
+# training data
+training/training_data/
+training_data/
+runs/
+
 # models
 artifacts/models/
 
