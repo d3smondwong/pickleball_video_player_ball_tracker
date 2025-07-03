@@ -1,4 +1,4 @@
 ultralytics==8.3.161
 huggingface-hub==0.33.1
 regex==2024.11.6
-safetensors==0.5.3
+inference-sdk==0.51.1
