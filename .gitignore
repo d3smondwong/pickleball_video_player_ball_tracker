@@ -1,6 +1,7 @@
 # training data
 training/training_data/
 training/Pickleball-Vision-1/
+training/pickle-court-keypoints-1/
 runs/
 
 # models
