@@ -72,17 +72,24 @@ class PlayerTracker:
         return player_dict
 
     def detect_frames(
+
         self,
         frames: list[np.ndarray],
         read_from_stub: bool = False,
         stub_path: str | None = None
     ) -> list[dict[int, list[float]]]:
         """
-        Detects players in a sequence of video frames.
+        Detects players in a list of video frames and returns their detections.
+        This method processes each frame to detect players and returns a list of detection dictionaries,
+        where each dictionary maps player IDs to their detected coordinates or features. Optionally,
+        detections can be loaded from or saved to a stub file using pickle serialization.
+    
         Args:
-            frames (list of np.ndarray): A list of video frames to process.
+            frames (list[np.ndarray]): List of video frames (as numpy arrays) to process.
+            read_from_stub (bool, optional): If True, loads detections from the stub file instead of processing frames. Defaults to False.
+            stub_path (str | None, optional): Path to the stub file for loading or saving detections. If None, stub functionality is disabled.
         Returns:
-            list: A list of dictionaries, each containing player detection results for a frame.
+            list[dict[int, list[float]]]: A list where each element is a dictionary mapping player IDs to lists of detected features for each frame.
         """
 
         player_detections = []
