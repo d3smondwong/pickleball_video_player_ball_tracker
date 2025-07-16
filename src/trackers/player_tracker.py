@@ -1,5 +1,6 @@
 from ultralytics import YOLO
 import numpy as np
+import cv2
 
 class PlayerTracker:
     def __init__(self, model_path: str):
@@ -84,5 +85,24 @@ class PlayerTracker:
         for frame in frames:
             player_dict = self.detect_frame(frame)
             player_detections.append(player_dict)
-            
+
         return player_detections
+
+    def draw_bounding_boxes(self, video_frames, player_detections):
+        output_video_frames = []
+
+        # Iterate through the video frames and player detections. zip combines the two lists so that we can iterate through both at the same time
+        for frame, player_dict in zip(video_frames, player_detections):
+
+            # Draw Bounding Boxes. loop over the player_dict which contains the track ID and bounding box coordinates
+            for track_id, bbox in player_dict.items():
+
+                # Extract coordinates from the bounding box
+                x1, y1, x2, y2 = bbox
+
+                # Draw the bounding box and player ID on the frame
+                cv2.putText(frame, f"Player ID: {track_id}",(int(bbox[0]),int(bbox[1] -10 )),cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
+                cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
+            output_video_frames.append(frame)
+
+        return output_video_frames
