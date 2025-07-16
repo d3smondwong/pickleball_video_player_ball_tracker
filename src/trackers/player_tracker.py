@@ -1,5 +1,6 @@
 from ultralytics import YOLO
 import numpy as np
+import pickle
 import cv2
 
 class PlayerTracker:
@@ -70,7 +71,12 @@ class PlayerTracker:
 
         return player_dict
 
-    def detect_frames(self, frames: list[np.ndarray]) -> list[dict[int, list[float]]]:
+    def detect_frames(
+        self,
+        frames: list[np.ndarray],
+        read_from_stub: bool = False,
+        stub_path: str | None = None
+    ) -> list[dict[int, list[float]]]:
         """
         Detects players in a sequence of video frames.
         Args:
@@ -81,10 +87,27 @@ class PlayerTracker:
 
         player_detections = []
 
+        # If read_from_stub is True, load the player detections from the stub file
+        if read_from_stub and stub_path is not None:
+            try:
+                with open(stub_path, 'rb') as file:
+                    player_detections = pickle.load(file)
+
+                return player_detections
+
+            except FileNotFoundError:
+                print(f"Stub file {stub_path} not found. Returning empty detections.")
+                player_detections = []
+
         # For each frame, detect the player and append it to the list
         for frame in frames:
             player_dict = self.detect_frame(frame)
             player_detections.append(player_dict)
+
+        # If read_from_stub is False, save the player detections to the stub file
+        if stub_path is not None:
+            with open(stub_path, 'wb') as file:
+                pickle.dump(player_detections, file)
 
         return player_detections
 

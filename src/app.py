@@ -41,7 +41,21 @@ def main():
     # Load model and initiate PlayerTracker to track players for different frames
     model_path = Path('artifacts/models/yolo12x.pt')
     player_tracker = PlayerTracker(model_path=str(model_path))
-    player_detections = player_tracker.detect_frames(video_frames)
+
+    player_detections_stub_path = "artifacts/tracker_stubs/player_detections.pkl"
+
+    # Check if the stub file exists, if not, it will be created 
+    if not Path(player_detections_stub_path).exists():
+        print(f"Stub file not found, it will be created: {player_detections_stub_path}")
+        read_from_stub = False
+    else:
+        print(f"Loading player detections from stub file: {player_detections_stub_path}")
+        read_from_stub = True
+
+    player_detections = player_tracker.detect_frames(video_frames,
+                                                     read_from_stub=read_from_stub,
+                                                     stub_path=player_detections_stub_path
+                                                     )
 
     ###
     # Draw bounding boxes on the output video frames
