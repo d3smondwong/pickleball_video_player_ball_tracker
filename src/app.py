@@ -1,6 +1,9 @@
 from src.utils.video_utils import read_video, save_video
-from src.trackers.player_tracker import PlayerTracker
+from src.trackers import PlayerTracker, BallTracker
 from pathlib import Path
+import os
+import pickle
+from dotenv import load_dotenv
 
 def main():
     """
@@ -59,11 +62,42 @@ def main():
                                                      )
 
     ###
+    # Track the ball using model trained on Roboflow
+    ###
+
+    # Load model and initiate BallTracker to track ball for different frames
+    load_dotenv()
+    api_key = os.getenv("ROBOFLOW_API_KEY")
+
+    if api_key is None:
+        raise ValueError("ROBOFLOW_API_KEY environment variable is not set.")
+    model_id = "pickleball-vision/6"
+
+    ball_tracker = BallTracker(api_key=api_key, model_id=model_id)
+
+    ball_detections_stub_path = f"artifacts/tracker_stubs/ball_detections_{input_video_path.stem}.pkl"
+
+    # Save balls detected into a Pickle file. To prevent multiple processing in production
+    # Check if the pickle file exists, if not, it will be created
+    if not Path(ball_detections_stub_path).exists():
+        print(f"Stub file not found, it will be created: {ball_detections_stub_path}")
+        read_from_stub = False
+    else:
+        print(f"Loading ball detections from stub file: {ball_detections_stub_path}")
+        read_from_stub = True
+
+    ball_detections = ball_tracker.detect_frames(video_frames,
+                                                 read_from_stub=read_from_stub,
+                                                 stub_path=ball_detections_stub_path
+                                                 )
+
+    ###
     # Draw bounding boxes on the output video frames
     ###
 
     # Draw bounding boxes on the video frames using the player detections
     output_video_frames = player_tracker.draw_bounding_boxes(video_frames, player_detections)
+    output_video_frames= ball_tracker.draw_bounding_boxes(output_video_frames, ball_detections)
 
     ###
     # Save video frames to the output video file
