@@ -44,7 +44,8 @@ def main():
 
     player_detections_stub_path = f"artifacts/tracker_stubs/player_detections_{input_video_path.stem}.pkl"
 
-    # Check if the stub file exists, if not, it will be created
+    # Save players detected into a Pickle file. To prevent multiple processing in production
+    # Check if the pickle file exists, if not, it will be created
     if not Path(player_detections_stub_path).exists():
         print(f"Stub file not found, it will be created: {player_detections_stub_path}")
         read_from_stub = False
