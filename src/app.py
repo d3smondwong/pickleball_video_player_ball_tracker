@@ -20,7 +20,7 @@ def main():
     ###
 
     # Ensure the input and output paths are correct
-    input_video_path = Path("input_videos/input_video.mp4")
+    input_video_path = Path("input_videos/pickleball_highlights.mp4")
 
     # Checkers
     if not input_video_path.exists():
@@ -42,9 +42,9 @@ def main():
     model_path = Path('artifacts/models/yolo12x.pt')
     player_tracker = PlayerTracker(model_path=str(model_path))
 
-    player_detections_stub_path = "artifacts/tracker_stubs/player_detections.pkl"
+    player_detections_stub_path = f"artifacts/tracker_stubs/player_detections_{input_video_path.stem}.pkl"
 
-    # Check if the stub file exists, if not, it will be created 
+    # Check if the stub file exists, if not, it will be created
     if not Path(player_detections_stub_path).exists():
         print(f"Stub file not found, it will be created: {player_detections_stub_path}")
         read_from_stub = False
@@ -67,7 +67,7 @@ def main():
     ###
     # Save video frames to the output video file
     ###
-    output_video_path = Path("output_videos/output_video.avi")
+    output_video_path = Path(f"output_videos/{input_video_path.stem}_output.avi")
     print(f"Saving video frames to: {output_video_path}")
 
     # Check if the parent directory of the output video path exists, if not, create it
