@@ -1,5 +1,6 @@
 from src.utils.video_utils import read_video, save_video
 from src.trackers import PlayerTracker, BallTracker
+from src.court_line_detector.court_line_detector import CourtLineDetector
 from pathlib import Path
 import os
 import pickle
@@ -92,13 +93,30 @@ def main():
                                                  )
 
     ###
+    # Detect the court lines using the CourtLineDetector
+    ###
+    """
+    # The keypoints model does not work too well yet.
+
+    court_model_path = "artifacts/models/keypoints_model.pth"
+    court_line_detector = CourtLineDetector(model_path=court_model_path)
+
+    # Predict court keypoints for the first frame as the camera is static
+    court_keypoints = court_line_detector.predict(video_frames[0])
+    """
+    ###
     # Draw bounding boxes on the output video frames
     ###
-
-    # Draw bounding boxes on the video frames using the player detections
+    # Draw bounding boxes on the video frames using the player and ball detections
     output_video_frames = player_tracker.draw_bounding_boxes(video_frames, player_detections)
     output_video_frames= ball_tracker.draw_bounding_boxes(output_video_frames, ball_detections)
 
+    """
+    # The keypoints model does not work too well yet.
+    
+    # Draw the court keypoints on the output video frames
+    output_video_frames = court_line_detector.draw_keypoints_on_video(output_video_frames, court_keypoints)
+    """
     ###
     # Save video frames to the output video file
     ###
