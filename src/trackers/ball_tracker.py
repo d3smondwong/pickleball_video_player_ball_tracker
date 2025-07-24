@@ -4,6 +4,8 @@ import pickle
 import cv2
 from supervision.detection.core import Detections
 from inference_sdk import InferenceHTTPClient
+import pandas as pd
+
 
 class BallTracker:
     def __init__(self, api_key: str, model_id: str):
@@ -12,6 +14,28 @@ class BallTracker:
             api_key=api_key
         )
         self.model_id = model_id
+
+    def interpolate_ball_positions(self, ball_positions):
+
+        # ball_detections is in the following format:
+        # ball_detections: [{0: [523.0, 148.0, 538.0, 162.0]},  {},]
+        # where 0 is the track ID and the list contains the bounding box coordinates [x1, y1, x2, y2]
+        # {} indicates that no ball was detected in that frame
+
+        # Iterates through the list and extracts the x,y values with the key 0 (where ball is detected). Get empty list if not detected
+        ball_positions = [x.get(0,[]) for x in ball_positions]
+
+        # convert the list into pandas dataframe. To use interpolate and bfill functions
+        df_ball_positions = pd.DataFrame(ball_positions,columns=['x1','y1','x2','y2'])
+
+        # interpolate the missing values
+        df_ball_positions = df_ball_positions.interpolate()
+        df_ball_positions = df_ball_positions.bfill()
+
+        # Convert the dataframe back to a list of dictionaries with the track ID as the key
+        ball_positions = [{0:x} for x in df_ball_positions.to_numpy().tolist()]
+
+        return ball_positions
 
     def detect_frame(self, frame: np.ndarray) -> dict[int, list[float]]:
 
