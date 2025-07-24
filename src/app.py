@@ -5,6 +5,7 @@ from pathlib import Path
 import os
 import pickle
 from dotenv import load_dotenv
+import cv2
 
 def main():
     """
@@ -92,10 +93,13 @@ def main():
                                                  stub_path=ball_detections_stub_path
                                                  )
 
+    # To interpolate the ball positions when it is not detected in some frames. Does not work well as there are times it goes out of the camera during lobs
+    # ball_detections = ball_tracker.interpolate_ball_positions(ball_detections)
+
     ###
     # Detect the court lines using the CourtLineDetector
     ###
-    """
+    #"""
     # The keypoints model does not work too well yet.
 
     court_model_path = "artifacts/models/keypoints_model.pth"
@@ -103,7 +107,7 @@ def main():
 
     # Predict court keypoints for the first frame as the camera is static
     court_keypoints = court_line_detector.predict(video_frames[0])
-    """
+    #"""
     ###
     # Draw bounding boxes on the output video frames
     ###
@@ -111,17 +115,21 @@ def main():
     output_video_frames = player_tracker.draw_bounding_boxes(video_frames, player_detections)
     output_video_frames= ball_tracker.draw_bounding_boxes(output_video_frames, ball_detections)
 
-    """
+    #"""
     # The keypoints model does not work too well yet.
-    
+
     # Draw the court keypoints on the output video frames
     output_video_frames = court_line_detector.draw_keypoints_on_video(output_video_frames, court_keypoints)
-    """
+    #"""
     ###
     # Save video frames to the output video file
     ###
     output_video_path = Path(f"output_videos/{input_video_path.stem}_output.avi")
     print(f"Saving video frames to: {output_video_path}")
+
+    ## Draw frame number on top left corner
+    for i, frame in enumerate(output_video_frames):
+        cv2.putText(frame, f"Frame: {i}",(10,30),cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
 
     # Check if the parent directory of the output video path exists, if not, create it
     if not output_video_path.parent.exists():
