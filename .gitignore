@@ -4,6 +4,8 @@ training/Pickleball-Vision-1/
 training/pickle-court-keypoints-1/
 training/Court-Detection-2/
 training/pickle-court-keypoints-5/
+output_videos/waters_pareneau_output.avi
+input_videos/waters_pareneau.avi
 runs/
 
 # models
