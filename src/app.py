@@ -100,7 +100,7 @@ def main():
     # Detect the court lines using the CourtLineDetector
     ###
     """
-    # The keypoints model does not work too well yet.
+    # The keypoints model does not work too well yet. To rectify
 
     court_model_path = "artifacts/models/keypoints_model.pth"
     court_line_detector = CourtLineDetector(model_path=court_model_path)
