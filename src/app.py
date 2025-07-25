@@ -79,7 +79,7 @@ def main():
 
     ball_detections_stub_path = f"artifacts/tracker_stubs/ball_detections_{input_video_path.stem}.pkl"
 
-    # Save balls detected into a Pickle file. To prevent multiple processing in production
+    # Save balls detection into a Pickle file. To prevent multiple processing in production
     # Check if the pickle file exists, if not, it will be created
     if not Path(ball_detections_stub_path).exists():
         print(f"Stub file not found, it will be created: {ball_detections_stub_path}")
@@ -99,15 +99,18 @@ def main():
     ###
     # Detect the court lines using the CourtLineDetector
     ###
-    #"""
+    """
     # The keypoints model does not work too well yet.
 
     court_model_path = "artifacts/models/keypoints_model.pth"
     court_line_detector = CourtLineDetector(model_path=court_model_path)
 
-    # Predict court keypoints for the first frame as the camera is static
-    court_keypoints = court_line_detector.predict(video_frames[0])
-    #"""
+    """
+    # Using Roboflow model for court keypoints detection
+    model_id = "pickle-court-keypoints-nluo7-8nk97/4"
+    court_line_detector = CourtLineDetector(api_key=api_key, model_id=model_id)
+    court_keypoints = court_line_detector.predict_roboflow(video_frames[0])
+
     ###
     # Draw bounding boxes on the output video frames
     ###
