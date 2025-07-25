@@ -2,10 +2,79 @@ from ultralytics import YOLO
 import numpy as np
 import pickle
 import cv2
+from src.utils.bbox_utils import measure_distance, get_center_of_bbox
 
 class PlayerTracker:
     def __init__(self, model_path: str):
         self.model = YOLO(model_path)
+
+    def choose_players(
+        self,
+        court_keypoints: list,
+        player_dict: dict[int, list[float]]
+    ) -> list[int]:
+        """
+        Selects the closest players to the court keypoints based on bounding box centers.
+
+        Args:
+            court_keypoints (list): List of court keypoints, each as a tuple, dict, or list of (x, y) coordinates.
+            player_dict (dict[int, list[float]]): Dictionary mapping player track IDs to bounding box coordinates.
+
+        Returns:
+            list[int]: List of selected player track IDs (up to 4) closest to the court keypoints.
+        """
+        distances = []
+        for track_id, bbox in player_dict.items():
+
+            # get the center of the player bounding box
+            player_center = get_center_of_bbox(bbox)
+
+            # Calculate the distance from the player center to each court keypoint
+            min_distance = float('inf')
+
+            # Loop through the court keypoints and calculate the distance. Court keypoints are in the format [x1, y1, x2, y2, ...] so we skip every 2nd element
+            for kp in court_keypoints:
+                if isinstance(kp, dict):
+                    court_keypoint = (kp['x'], kp['y'])
+                else:
+                    court_keypoint = kp  # fallback if already a tuple/list
+                distance = measure_distance(player_center, court_keypoint)
+                if distance < min_distance:
+                    min_distance = distance
+            distances.append((track_id, min_distance))
+
+        # sorrt the distances in ascending order
+        distances.sort(key = lambda x: x[1])
+
+        # Choose the first 4 players with the smallest distances
+        chosen_players = [distances[i][0] for i in range(min(4, len(distances)))]
+        return chosen_players
+
+    def choose_and_filter_players(
+        self,
+        court_keypoints: list,
+        player_detections: list[dict[int, list[float]]]
+    ) -> list[dict[int, list[float]]]:
+        """
+        Filters player detections for each frame by selecting the closest players to the court keypoints.
+        Args:
+            court_keypoints (list or np.ndarray): The keypoints representing the court for each frame.
+            player_detections (list of dict): A list where each element is a dictionary mapping player track IDs to bounding boxes for a frame.
+        Returns:
+            list of dict: A list of dictionaries, each containing only the selected player detections for each frame, filtered to include only the closest players as determined by `choose_players`.
+        """
+        filtered_player_detections = []
+
+        for player_dict in player_detections:
+            if player_dict:
+                # Dynamically choose the closest players for this frame
+                chosen_players = self.choose_players(court_keypoints, player_dict)
+                filtered_player_dict = {track_id: bbox for track_id, bbox in player_dict.items() if track_id in chosen_players}
+            else:
+                filtered_player_dict = {}
+            filtered_player_detections.append(filtered_player_dict)
+
+        return filtered_player_detections
 
     def detect_frame(self, frame: np.ndarray) -> dict[int, list[float]]:
         """
@@ -83,7 +152,7 @@ class PlayerTracker:
         This method processes each frame to detect players and returns a list of detection dictionaries,
         where each dictionary maps player IDs to their detected coordinates or features. Optionally,
         detections can be loaded from or saved to a stub file using pickle serialization.
-    
+
         Args:
             frames (list[np.ndarray]): List of video frames (as numpy arrays) to process.
             read_from_stub (bool, optional): If True, loads detections from the stub file instead of processing frames. Defaults to False.
@@ -118,7 +187,20 @@ class PlayerTracker:
 
         return player_detections
 
-    def draw_bounding_boxes(self, video_frames, player_detections):
+    def draw_bounding_boxes(
+        self,
+        video_frames: list[np.ndarray],
+        player_detections: list[dict[int, list[float]]]
+    ) -> list[np.ndarray]:
+        """
+        Draws bounding boxes and player IDs on each video frame based on player detections.
+        Args:
+            video_frames (list of np.ndarray): List of video frames (images) to annotate.
+            player_detections (list of dict): List of dictionaries for each frame, where each dictionary maps
+                player track IDs (int) to bounding box coordinates (tuple of four ints: (x1, y1, x2, y2)).
+        Returns:
+            list of np.ndarray: List of video frames with bounding boxes and player IDs drawn.
+        """
         output_video_frames = []
 
         # Iterate through the video frames and player detections. zip combines the two lists so that we can iterate through both at the same time
