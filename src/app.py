@@ -100,11 +100,11 @@ def main():
     # Detect the court lines using the CourtLineDetector
     ###
     """
-    # The keypoints model does not work too well yet. To rectify
+    # The keypoints model does not work too well yet. Trying to find a better model. Using Roboflow model for now
 
     court_model_path = "artifacts/models/keypoints_model.pth"
     court_line_detector = CourtLineDetector(model_path=court_model_path)
-
+    """
 
     # Using Roboflow model for court keypoints detection
     model_id = "pickle-court-keypoints-nluo7-8nk97/4"
@@ -114,7 +114,7 @@ def main():
 
     # Filter the player detections to only include the players on the court
     player_detections = player_tracker.choose_and_filter_players(court_keypoints, player_detections)
-    """
+
     ###
     # Draw bounding boxes on the output video frames
     ###
@@ -122,7 +122,7 @@ def main():
     output_video_frames = player_tracker.draw_bounding_boxes(video_frames, player_detections)
     output_video_frames= ball_tracker.draw_bounding_boxes(output_video_frames, ball_detections)
 
-    # Draw the court keypoints on the output video frames
+    # Draw the court keypoints on the output video frames. Not drawing for now as the keypoints model is not very accurate
     # output_video_frames = court_line_detector.draw_keypoints_on_video(output_video_frames, court_keypoints)
 
     ###
