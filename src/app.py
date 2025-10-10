@@ -1,14 +1,18 @@
+import os
+import pickle
+import cv2
+import json
+import hydra
+
 from src.utils.video_utils import read_video, save_video
 from src.trackers import PlayerTracker, BallTracker
 from src.court_line_detector.court_line_detector import CourtLineDetector
 from pathlib import Path
-import os
-import pickle
+from omegaconf import DictConfig
 from dotenv import load_dotenv
-import cv2
-import json
 
-def main():
+@hydra.main(config_path="../config", config_name="app.yaml", version_base="1.2")
+def main(cfg: DictConfig):
     """
     Main function to process a video file.
     This function performs the following steps:
