@@ -3,7 +3,10 @@ import numpy as np
 import pickle
 import cv2
 from src.utils.bbox_utils import measure_distance, get_center_of_bbox
+import logging
 
+# Set up logging
+logger = logging.getLogger(__name__)
 class PlayerTracker:
     def __init__(self, model_path: str):
         self.model = YOLO(model_path)
@@ -102,7 +105,7 @@ class PlayerTracker:
 
         # If no boxes are detected, return an empty dictionary
         if results.boxes is None:
-            print(f"No boxes detected in {results.names}.")
+            logger.error(f"No boxes detected in {results.names}.")
             return player_dict
 
         # Focus on person. Iterate through the detected boxes and store the track ID and bounding box coordinates
@@ -172,7 +175,7 @@ class PlayerTracker:
                 return player_detections
 
             except FileNotFoundError:
-                print(f"Stub file {stub_path} not found. Returning empty detections.")
+                logger.error(f"Stub file {stub_path} not found. Returning empty detections.")
                 player_detections = []
 
         # For each frame, detect the player and append it to the list
@@ -186,6 +189,67 @@ class PlayerTracker:
                 pickle.dump(player_detections, file)
 
         return player_detections
+
+    # def _draw_ellipse(
+    #     self,
+    #     frame: 'np.ndarray',
+    #     bbox: tuple[int, int, int, int],
+    #     color: tuple[int, int, int],
+    # ) -> 'np.ndarray':
+
+    #     x1, y1, x2, y2 = map(int, bbox)
+    #     x_center, y_center = get_center_of_bbox(bbox)
+    #     width = get_bbox_width(bbox)
+
+    #     ###
+    #     # Drawing the ellipse to represent the player or referee
+    #     ###
+
+    #     # Define ellipse parameters
+    #     axes_length = (int(width), int(0.35*width))
+    #     angle = 0
+    #     # Ellipse is drawn from start_angle to end_angle. Draw -45 - 235 degrees for players to stand out
+    #     start_angle = -45
+    #     end_angle = 235
+    #     thickness = 2
+    #     line_type = cv2.LINE_4
+
+    #     # Draw the ellipse on the frame
+    #     cv2.ellipse(frame, (x_center, y2), axes_length, angle, start_angle, end_angle, color, thickness, line_type)
+
+    #     ###
+    #     # Drawing the rectangle place the player number
+    #     ###
+
+    #     # Define rectangle parameters
+    #     rectangle_width = 40
+    #     rectangle_height = 20
+
+    #     rectangle_x1 = x_center - rectangle_width // 2
+    #     rectangle_y1 = (y2- rectangle_height//2) +15
+    #     rectangle_x2 = x_center + rectangle_width//2
+    #     rectangle_y2 = (y2+ rectangle_height//2) +15
+
+    #     # Define text parameters
+    #     font = cv2.FONT_HERSHEY_SIMPLEX
+    #     font_scale = 0.6
+    #     color_text = (0, 0, 0)  # Black color for text
+    #     thickness = 2
+
+
+    #     if track_id is not None:
+    #         # Draw the rectangle on the frame
+    #         cv2.rectangle(frame, (int(rectangle_x1), int(rectangle_y1)), (int(rectangle_x2), int(rectangle_y2)), color, cv2.FILLED)
+
+    #         # Calculate position to center the text in the rectangle
+    #         x1_text = rectangle_x1 + 12
+    #         if track_id >= 99:
+    #             x1_text -= 10
+
+    #         # Put the track ID text on the rectangle
+    #         cv2.putText(frame, str(track_id), (int(x1_text), int(rectangle_y1 + 15)), font, font_scale, color_text, thickness)
+
+    #     return frame
 
     def draw_bounding_boxes(
         self,

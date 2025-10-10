@@ -3,6 +3,7 @@ import pickle
 import cv2
 import json
 import hydra
+import logging
 
 from src.utils.video_utils import read_video, save_video
 from src.trackers import PlayerTracker, BallTracker
@@ -25,6 +26,9 @@ def main(cfg: DictConfig):
         ValueError: If the input path is not a file or has an unsupported format.
     """
 
+    # Set up logging
+    logger = logging.getLogger(os.path.basename(__file__))
+
     ###
     # Read the frames from the input video file
     ###
@@ -36,14 +40,14 @@ def main(cfg: DictConfig):
 
     # Checkers
     if not input_video_path.exists():
-        raise FileNotFoundError(f"Input video file not found: {input_video_path}")
+        logger.error(f"Input video file not found: {input_video_path}")
     if not input_video_path.is_file():
-        raise ValueError(f"Input path is not a file: {input_video_path}")
+        logger.error(f"Input path is not a file: {input_video_path}")
     if not input_video_path.suffix.lower() in ['.mp4', '.avi', '.mov']:
-        raise ValueError(f"Unsupported video file format: {input_video_path.suffix}. Supported formats are .mp4, .avi, .mov.")
+        logger.error(f"Unsupported video file format: {input_video_path.suffix}. Supported formats are .mp4, .avi, .mov.")
 
     # Read video frames
-    print(f"Reading video frames from: {input_video_path}")
+    logger.info(f"Reading video frames from: {input_video_path}")
     video_frames = read_video(str(input_video_path))
 
     ###
@@ -63,10 +67,10 @@ def main(cfg: DictConfig):
     # Save players detected into a Pickle file. To prevent multiple processing in production
     # Check if the pickle file exists, if not, it will be created
     if not Path(player_detections_stub_path).exists():
-        print(f"Stub file not found, it will be created: {player_detections_stub_path}")
+        logger.info(f"Stub file not found, it will be created: {player_detections_stub_path}")
         read_from_stub = False
     else:
-        print(f"Loading player detections from stub file: {player_detections_stub_path}")
+        logger.info(f"Loading player detections from stub file: {player_detections_stub_path}")
         read_from_stub = True
 
     player_detections = player_tracker.detect_frames(video_frames,
@@ -93,10 +97,10 @@ def main(cfg: DictConfig):
     # Save balls detection into a Pickle file. To prevent multiple processing in production
     # Check if the pickle file exists, if not, it will be created
     if not Path(ball_detections_stub_path).exists():
-        print(f"Stub file not found, it will be created: {ball_detections_stub_path}")
+        logger.info(f"Stub file not found, it will be created: {ball_detections_stub_path}")
         read_from_stub = False
     else:
-        print(f"Loading ball detections from stub file: {ball_detections_stub_path}")
+        logger.info(f"Loading ball detections from stub file: {ball_detections_stub_path}")
         read_from_stub = True
 
     ball_detections = ball_tracker.detect_frames(video_frames,
@@ -126,7 +130,7 @@ def main(cfg: DictConfig):
 
     court_keypoints_folder = cfg.court_keypoints.court_keypoints_folder
     court_keypoints_filename = cfg.court_keypoints.court_keypoints_filename.format(video_filename_stem=input_video_path.stem)
-    print(f'court_keypoints_filename: {court_keypoints_filename}')
+    logger.info(f'Loading court keypoints from: {court_keypoints_filename}')
     court_keypoints_path = Path(court_keypoints_folder) / court_keypoints_filename
 
     if not court_keypoints_path.exists():
@@ -153,7 +157,7 @@ def main(cfg: DictConfig):
     ###
     output_video_folder = cfg.videos.output_video_folder
     output_video_path = Path(output_video_folder) / f"{input_video_path.stem}_output.avi"
-    print(f"Saving video frames to: {output_video_path}")
+    logger.info(f"Saving video frames to: {output_video_path}")
 
     ## Draw frame number on top left corner
     for i, frame in enumerate(output_video_frames):

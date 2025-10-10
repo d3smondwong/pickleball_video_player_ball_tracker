@@ -1,3 +1,4 @@
+import logging
 from ultralytics import YOLO
 import numpy as np
 import pickle
@@ -6,7 +7,8 @@ from supervision.detection.core import Detections
 from inference_sdk import InferenceHTTPClient
 import pandas as pd
 
-
+# Set up logging
+logger = logging.getLogger(__name__)
 class BallTracker:
     def __init__(self, api_key: str, model_id: str):
         self.client = InferenceHTTPClient(
@@ -54,7 +56,7 @@ class BallTracker:
 
         # If no boxes are detected, return an empty dictionary
         if detections is None or len(detections) == 0:
-            print("No boxes detected.")
+            logger.warning("No boxes detected.")
             return ball_dict
 
         # There is only 1 class (ball) in this model. Store the bounding box coordinates
@@ -84,7 +86,7 @@ class BallTracker:
                 return ball_detections
 
             except FileNotFoundError:
-                print(f"Stub file {stub_path} not found. Returning empty detections.")
+                logger.error(f"Stub file {stub_path} not found. Returning empty detections.")
                 ball_detections = []
 
         # For each frame, detect the ball and append it to the list
