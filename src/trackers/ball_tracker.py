@@ -7,6 +7,7 @@ from ultralytics import YOLO
 
 from supervision.detection.core import Detections
 from inference_sdk import InferenceHTTPClient
+from src.utils.bbox_utils import get_center_of_bbox
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -102,6 +103,34 @@ class BallTracker:
 
         return ball_detections
 
+    def _draw_triangle(self, frame: np.ndarray, bbox: tuple[int, int, int, int], color: tuple[int, int, int]) -> np.ndarray:
+        """
+        Draws a filled triangle with an outlined border at the top center of the given bounding box on the frame.
+        The triangle is positioned such that its base is at the top center of the bounding box, and its tip points upward.
+        The triangle is filled with the specified color and outlined in black.
+        Args:
+            frame (np.ndarray): The image frame on which to draw the triangle.
+            bbox (tuple[int, int, int, int]): The bounding box coordinates in the format (x1, y1, x2, y2).
+            color (tuple[int, int, int]): The BGR color tuple for filling the triangle.
+        Returns:
+            np.ndarray: The frame with the triangle drawn on it.
+        """
+        x1, y1, x2, y2 = map(int, bbox)
+        x_center, y_center = get_center_of_bbox(bbox)
+
+        # Define triangle parameters
+        triangle_points = np.array([
+                [x_center,y1],
+                [x_center-5,y1-10],
+                [x_center+5,y1-10],
+            ], dtype=np.int32)
+
+        # Draw the triangle on the frame
+        cv2.fillPoly(frame, [triangle_points], color)
+        cv2.polylines(frame, [triangle_points], isClosed=True, color=(0, 0, 0), thickness=2)
+
+        return frame
+
     def draw_bounding_boxes(self, video_frames, ball_detections):
         output_video_frames = []
 
@@ -114,18 +143,19 @@ class BallTracker:
                 # Extract coordinates from the bounding box
                 x1, y1, x2, y2 = bbox
 
-                # Draw the bounding box and ball ID on the frame
-                # cv2.putText(frame, f"Ball",(int(bbox[0]),int(bbox[1] -10 )),cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 255), 2)
-                # cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 255), 2)
-
                 # Draw a circle at the centre of the bounding box to represent the ball
                 center_x = int((x1 + x2) / 2)
                 center_y = int((y1 + y2) / 2)
                 width = int(abs(x2 - x1))
                 height = int(abs(y2 - y1))
+
                 # radius based on bbox size (adjust factor as needed)
                 radius = max(2, int(max(width, height) * 0.4))
                 cv2.circle(frame, (center_x, center_y), radius, (0, 255, 255), 1)
+
+            # Draw triangle to annotate ball
+            for track_id, bbox in ball_dict.items():
+                frame = self._draw_triangle(frame, bbox,(0,255,0))
 
             output_video_frames.append(frame)
 
