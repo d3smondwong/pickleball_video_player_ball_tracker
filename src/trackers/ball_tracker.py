@@ -1,11 +1,12 @@
 import logging
-from ultralytics import YOLO
 import numpy as np
 import pickle
 import cv2
+import pandas as pd
+from ultralytics import YOLO
+
 from supervision.detection.core import Detections
 from inference_sdk import InferenceHTTPClient
-import pandas as pd
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -115,7 +116,17 @@ class BallTracker:
 
                 # Draw the bounding box and ball ID on the frame
                 # cv2.putText(frame, f"Ball",(int(bbox[0]),int(bbox[1] -10 )),cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 255), 2)
-                cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 255), 2)
+                # cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 255), 2)
+
+                # Draw a circle at the centre of the bounding box to represent the ball
+                center_x = int((x1 + x2) / 2)
+                center_y = int((y1 + y2) / 2)
+                width = int(abs(x2 - x1))
+                height = int(abs(y2 - y1))
+                # radius based on bbox size (adjust factor as needed)
+                radius = max(2, int(max(width, height) * 0.4))
+                cv2.circle(frame, (center_x, center_y), radius, (0, 255, 255), 1)
+
             output_video_frames.append(frame)
 
         return output_video_frames
