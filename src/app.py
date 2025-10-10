@@ -6,6 +6,7 @@ import os
 import pickle
 from dotenv import load_dotenv
 import cv2
+import json
 
 def main():
     """
@@ -100,17 +101,25 @@ def main():
     # Detect the court lines using the CourtLineDetector
     ###
     """
-    # The keypoints model does not work too well yet. Trying to find a better model. Using Roboflow model for now
+    # The custom keypoints model does not work too well yet. Trying to find a better model. Using Roboflow model for now
 
     court_model_path = "artifacts/models/keypoints_model.pth"
     court_line_detector = CourtLineDetector(model_path=court_model_path)
-    """
 
     # Using Roboflow model for court keypoints detection
     model_id = "pickle-court-keypoints-nluo7-8nk97/4"
     court_line_detector = CourtLineDetector(api_key=api_key, model_id=model_id)
     court_keypoints = court_line_detector.predict_roboflow(video_frames[0])
+    print(f'court keypoints: {court_keypoints}')
+    """
+    # Court keypoints calculated manually for now as both roboflow and custom trained model are not very accurate
+    court_keypoints_path = Path("court_keypoints/court_keypoints.json")
+    if not court_keypoints_path.exists():
+        raise FileNotFoundError(f"Court keypoints file not found: {court_keypoints_path}")
+    with court_keypoints_path.open("r", encoding="utf-8") as f:
+        court_keypoints = json.load(f)
 
+    print(f'court keypoints: {court_keypoints}')
 
     # Filter the player detections to only include the players on the court
     player_detections = player_tracker.choose_and_filter_players(court_keypoints, player_detections)
@@ -123,7 +132,8 @@ def main():
     output_video_frames= ball_tracker.draw_bounding_boxes(output_video_frames, ball_detections)
 
     # Draw the court keypoints on the output video frames. Not drawing for now as the keypoints model is not very accurate
-    # output_video_frames = court_line_detector.draw_keypoints_on_video(output_video_frames, court_keypoints)
+    court_line_detector = CourtLineDetector()
+    output_video_frames = court_line_detector.draw_keypoints_on_video(output_video_frames, court_keypoints)
 
     ###
     # Save video frames to the output video file

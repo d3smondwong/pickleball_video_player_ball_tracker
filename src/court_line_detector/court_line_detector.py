@@ -57,6 +57,13 @@ class CourtLineDetector:
             ])
             self.client = None
             self.model_id = None
+        elif api_key is None and model_id is None and model_path is None:
+            # No model mode, just for drawing keypoints
+            self.client = None
+            self.model_id = None
+            self.model = None
+            self.transform = None
+            self.device = None
         else:
             raise ValueError("You must provide either (api_key and model_id) for Roboflow mode or model_path for local PyTorch mode.")
 
