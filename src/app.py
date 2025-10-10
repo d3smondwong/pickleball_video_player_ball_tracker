@@ -30,7 +30,9 @@ def main(cfg: DictConfig):
     ###
 
     # Ensure the input and output paths are correct
-    input_video_path = Path("input_videos/pickleball_highlights.mp4")
+    input_dir = cfg.videos.input_video_folder
+    video_name = cfg.videos.video_filename
+    input_video_path = Path(input_dir) / video_name
 
     # Checkers
     if not input_video_path.exists():
@@ -49,10 +51,14 @@ def main(cfg: DictConfig):
     ###
 
     # Load model and initiate PlayerTracker to track players for different frames
-    model_path = Path('artifacts/models/yolo12x.pt')
+    model_folder = cfg.models.model_folder
+    model_filename = cfg.models.yolo12x
+    model_path = Path(model_folder) / model_filename
     player_tracker = PlayerTracker(model_path=str(model_path))
 
-    player_detections_stub_path = f"artifacts/tracker_stubs/player_detections_{input_video_path.stem}.pkl"
+    stub_folder = cfg.stubs.stub_folder
+
+    player_detections_stub_path = Path(stub_folder) / cfg.stubs.player_detections_stub.format(video_filename_stem=input_video_path.stem)
 
     # Save players detected into a Pickle file. To prevent multiple processing in production
     # Check if the pickle file exists, if not, it will be created
@@ -78,11 +84,11 @@ def main(cfg: DictConfig):
 
     if api_key is None:
         raise ValueError("ROBOFLOW_API_KEY environment variable is not set.")
-    model_id = "pickleball-vision/6"
+    model_id = cfg.models.roboflow_ball_model_id
 
     ball_tracker = BallTracker(api_key=api_key, model_id=model_id)
 
-    ball_detections_stub_path = f"artifacts/tracker_stubs/ball_detections_{input_video_path.stem}.pkl"
+    ball_detections_stub_path = Path(stub_folder) / cfg.stubs.ball_detections_stub.format(video_filename_stem=input_video_path.stem)
 
     # Save balls detection into a Pickle file. To prevent multiple processing in production
     # Check if the pickle file exists, if not, it will be created
@@ -117,13 +123,16 @@ def main(cfg: DictConfig):
     print(f'court keypoints: {court_keypoints}')
     """
     # Court keypoints calculated manually for now as both roboflow and custom trained model are not very accurate
-    court_keypoints_path = Path("court_keypoints/court_keypoints.json")
+
+    court_keypoints_folder = cfg.court_keypoints.court_keypoints_folder
+    court_keypoints_filename = cfg.court_keypoints.court_keypoints_filename.format(video_filename_stem=input_video_path.stem)
+    print(f'court_keypoints_filename: {court_keypoints_filename}')
+    court_keypoints_path = Path(court_keypoints_folder) / court_keypoints_filename
+
     if not court_keypoints_path.exists():
         raise FileNotFoundError(f"Court keypoints file not found: {court_keypoints_path}")
     with court_keypoints_path.open("r", encoding="utf-8") as f:
         court_keypoints = json.load(f)
-
-    print(f'court keypoints: {court_keypoints}')
 
     # Filter the player detections to only include the players on the court
     player_detections = player_tracker.choose_and_filter_players(court_keypoints, player_detections)
@@ -142,7 +151,8 @@ def main(cfg: DictConfig):
     ###
     # Save video frames to the output video file
     ###
-    output_video_path = Path(f"output_videos/{input_video_path.stem}_output.avi")
+    output_video_folder = cfg.videos.output_video_folder
+    output_video_path = Path(output_video_folder) / f"{input_video_path.stem}_output.avi"
     print(f"Saving video frames to: {output_video_path}")
 
     ## Draw frame number on top left corner
