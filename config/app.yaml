@@ -4,7 +4,7 @@ hydra:
     dir: hydra_logs/${now:%Y-%m-%d}/${now:%H-%M-%S}
 
 videos:
-  video_filename: "pickleball_highlights.mp4"
+  video_filename: "Waters_Bright_vs_Black_Todd.mp4"
   input_video_folder: "data/input_videos/"
   output_video_folder: "data/output_videos/"
 
