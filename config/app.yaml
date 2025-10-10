@@ -1,0 +1,4 @@
+# Hydra configuration for logging. Customised the folder
+hydra:
+  run:
+    dir: hydra_logs/${now:%Y-%m-%d}/${now:%H-%M-%S}
