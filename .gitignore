@@ -6,6 +6,9 @@ training/Court-Detection-2/
 training/pickle-court-keypoints-5/
 runs/
 
+# hydra logs
+hydra_logs/
+
 # models
 data/artifacts/models/
 data/artifacts/tracker_stubs/
