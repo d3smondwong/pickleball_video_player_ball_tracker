@@ -127,7 +127,7 @@ class BallTracker:
 
         # Draw the triangle on the frame
         cv2.fillPoly(frame, [triangle_points], color)
-        cv2.polylines(frame, [triangle_points], isClosed=True, color=(0, 0, 0), thickness=2)
+        cv2.polylines(frame, [triangle_points], isClosed=True, color=(0, 0, 0), thickness=1)
 
         return frame
 
@@ -155,7 +155,7 @@ class BallTracker:
 
             # Draw triangle to annotate ball
             for track_id, bbox in ball_dict.items():
-                frame = self._draw_triangle(frame, bbox,(0,255,0))
+                frame = self._draw_triangle(frame, bbox,(0,255,255))
 
             output_video_frames.append(frame)
 
