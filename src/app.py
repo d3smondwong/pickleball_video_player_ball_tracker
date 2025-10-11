@@ -5,6 +5,7 @@ import json
 import hydra
 import logging
 
+from src.mini_court.mini_court import MiniCourt
 from src.utils.video_utils import read_video, save_video
 from src.trackers import PlayerTracker, BallTracker
 from src.court_line_detector.court_line_detector import CourtLineDetector
@@ -144,7 +145,13 @@ def main(cfg: DictConfig):
     player_detections = player_tracker.choose_and_filter_players(court_keypoints, player_detections)
 
     ###
-    # Draw bounding boxes on the output video frames
+    # Minicourt
+    ###
+    # MiniCourt
+    mini_court = MiniCourt(video_frames[0])
+
+    ###
+    # Annotate the output video frames
     ###
     # Draw bounding boxes on the video frames using the player and ball detections
     output_video_frames = player_tracker.draw_bounding_boxes(video_frames, player_detections)
@@ -153,6 +160,9 @@ def main(cfg: DictConfig):
     # Draw the court keypoints on the output video frames. Not drawing for now as the keypoints model is not very accurate
     court_line_detector = CourtLineDetector()
     output_video_frames = court_line_detector.draw_keypoints_on_video(output_video_frames, court_keypoints)
+
+    # Draw Mini Court
+    output_video_frames = mini_court.draw_mini_court(output_video_frames)
 
     ###
     # Save video frames to the output video file
