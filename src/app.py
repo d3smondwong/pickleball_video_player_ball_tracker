@@ -9,7 +9,7 @@ from src.utils.video_utils import read_video, save_video
 from src.trackers import PlayerTracker, BallTracker
 from src.court_line_detector.court_line_detector import CourtLineDetector
 from pathlib import Path
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 from dotenv import load_dotenv
 
 @hydra.main(config_path="../config", config_name="app.yaml", version_base="1.2")
@@ -53,12 +53,14 @@ def main(cfg: DictConfig):
     ###
     # Track the player using yolo12x
     ###
+    # Load the bytetrack config from cfg
+    bytetrack_cfg_path = Path("config/bytetrack.yaml")
 
     # Load model and initiate PlayerTracker to track players for different frames
     model_folder = cfg.models.model_folder
     model_filename = cfg.models.yolo12x
     model_path = Path(model_folder) / model_filename
-    player_tracker = PlayerTracker(model_path=str(model_path))
+    player_tracker = PlayerTracker(model_path=str(model_path), tracker_cfg_path=bytetrack_cfg_path)
 
     stub_folder = cfg.stubs.stub_folder
 

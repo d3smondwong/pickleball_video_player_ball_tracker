@@ -3,14 +3,16 @@ import pickle
 import cv2
 import logging
 
+from pathlib import Path
 from ultralytics import YOLO
 from src.utils.bbox_utils import measure_distance, get_center_of_bbox, get_bbox_width, get_foot_position, measure_xy_distance
 
 # Set up logging
 logger = logging.getLogger(__name__)
 class PlayerTracker:
-    def __init__(self, model_path: str):
+    def __init__(self, model_path: str, tracker_cfg_path: Path):
         self.model = YOLO(model_path)
+        self.tracker_cfg_path = tracker_cfg_path
 
     def point_in_polygon(self, point: tuple[float, float], polygon_vertices: list[tuple[float, float]]) -> bool:
         """
@@ -214,7 +216,7 @@ class PlayerTracker:
         """
 
         # Detect the items (eg. person) in the frame using the YOLO model
-        results = self.model.track(frame, persist=True)[0]
+        results = self.model.track(frame, persist=True, tracker=self.tracker_cfg_path)[0]
 
         # Extract the bounding boxes and their track IDs
         id_name_dict = results.names
@@ -386,8 +388,8 @@ class PlayerTracker:
                 frame = self._draw_ellipse(frame, (int(x1), int(y1), int(x2), int(y2)), (0, 255, 0))
 
                 # Draw the bounding box and player ID on the frame
-                # cv2.putText(frame, f"Player ID: {track_id}",(int(bbox[0]),int(bbox[1] -10 )),cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
-                # cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
+                cv2.putText(frame, f"Player ID: {track_id}",(int(bbox[0]),int(bbox[1] -10 )),cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
+                cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
             output_video_frames.append(frame)
 
         return output_video_frames
