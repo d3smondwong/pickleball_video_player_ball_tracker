@@ -202,7 +202,7 @@ class PlayerTracker:
 
     def detect_frame(self, frame: np.ndarray) -> dict[int, list[float]]:
         """
-        Detects and tracks players (persons) in a given video frame using a YOLO model.
+        Detects and tracks players (persons) in a given video frame using a YOLO model. Pass in bytetrack config for better tracking across frames.
         Args:
             frame (numpy.ndarray): The input video frame to process.
         Returns:
