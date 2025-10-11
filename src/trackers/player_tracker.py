@@ -1,9 +1,10 @@
-from ultralytics import YOLO
 import numpy as np
 import pickle
 import cv2
-from src.utils.bbox_utils import measure_distance, get_center_of_bbox
 import logging
+
+from ultralytics import YOLO
+from src.utils.bbox_utils import measure_distance, get_center_of_bbox, get_bbox_width, get_foot_position, measure_xy_distance
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -11,28 +12,145 @@ class PlayerTracker:
     def __init__(self, model_path: str):
         self.model = YOLO(model_path)
 
+    def point_in_polygon(self, point: tuple[float, float], polygon_vertices: list[tuple[float, float]]) -> bool:
+        """
+        Determines if a 2D point is inside a polygon using the Ray Casting Algorithm (or even-odd rule).
+
+        Args:
+            point (tuple[float, float]): The (x, y) coordinates of the test point (e.g., player's foot position).
+            polygon_vertices (list[tuple[float, float]]): An ordered list of the polygon's (x, y) vertices
+                                                        (e.g., the court's perimeter keypoints).
+
+        Returns:
+            bool: True if the point is strictly inside the polygon, False otherwise.
+        """
+        x, y = point
+        n = len(polygon_vertices)
+        inside = False
+
+        # A polygon must have at least 3 vertices
+        if n < 3:
+            return False
+
+        # Start with the last vertex as the previous vertex
+        p1x, p1y = polygon_vertices[n - 1]
+
+        # Iterate through all edges of the polygon
+        for i in range(n):
+            p2x, p2y = polygon_vertices[i]
+
+            # Check if the ray (horizontal line from 'point' to infinity) intersects the edge (p1, p2)
+            # The core logic checks two conditions:
+            # 1. The y-coordinate of the test point must be between the y-coordinates of the two vertices (p1y, p2y).
+            # 2. The intersection point of the ray with the edge must be to the right of the test point's x-coordinate.
+            if ((p1y > y) != (p2y > y)):
+                # Calculate the x-coordinate of the intersection point
+                # Equation for x-intersection: x_int = (p2x - p1x) * (y - p1y) / (p2y - p1y) + p1x
+                # We check if x is less than x_int (i.e., the intersection is to the right of the test point)
+                intersect_x = (p2x - p1x) * (y - p1y) / (p2y - p1y) + p1x
+
+                if x < intersect_x:
+                    # If an intersection is found, flip the 'inside' flag
+                    inside = not inside
+
+            # Move to the next edge
+            p1x, p1y = p2x, p2y
+
+        return inside
+
+    def expand_buffer_zone_polygon(self, polygon_vertices: list[tuple[float, float]], scale: float = 1.2) -> list[tuple[float, float]]:
+        """
+        Expands a polygon by scaling its vertices outward from the centroid.
+        Args:
+            polygon_vertices (list[tuple[float, float]]):
+                A list of (x, y) tuples representing the vertices of the polygon.
+            scale (float, optional):
+                The factor by which to scale the polygon outward from its centroid.
+                Default is 1.2.
+        Returns:
+            list[tuple[float, float]]:
+                A list of (x, y) tuples representing the expanded polygon vertices.
+        Notes:
+            - If polygon_vertices is empty, returns an empty list.
+            - The expansion is performed by calculating the centroid of the polygon,
+              then scaling each vertex's vector from the centroid by the given scale factor.
+        """
+
+        if not polygon_vertices:
+            return []
+
+        cx = sum(p[0] for p in polygon_vertices) / len(polygon_vertices)
+        cy = sum(p[1] for p in polygon_vertices) / len(polygon_vertices)
+
+        expanded_polygon = []
+        for x, y in polygon_vertices:
+            vx = x - cx
+            vy = y - cy
+            # scale vector outward from centroid
+            nx = cx + vx * scale
+            ny = cy + vy * scale
+            expanded_polygon.append((float(nx), float(ny)))
+        return expanded_polygon
+
     def choose_players(
         self,
         court_keypoints: list,
         player_dict: dict[int, list[float]]
     ) -> list[int]:
-        """
-        Selects the closest players to the court keypoints based on bounding box centers.
 
+        """
+        Selects up to four player track IDs whose foot positions are closest to the court keypoints and are located within an expanded buffer zone around the court.
         Args:
-            court_keypoints (list): List of court keypoints, each as a tuple, dict, or list of (x, y) coordinates.
-            player_dict (dict[int, list[float]]): Dictionary mapping player track IDs to bounding box coordinates.
-
+            court_keypoints (list): List of court keypoints, each represented as either a dictionary with 'x' and 'y' keys or a tuple/list of (x, y) coordinates.
+            player_dict (dict[int, list[float]]): Dictionary mapping player track IDs to their bounding box coordinates.
         Returns:
-            list[int]: List of selected player track IDs (up to 4) closest to the court keypoints.
+            list[int]: List of up to four selected player track IDs, sorted by proximity to the court keypoints.
+        Raises:
+            ValueError: If required court keypoints are missing or have invalid formats.
+        Notes:
+            - The buffer zone polygon is created by expanding the court corners by 20% to ensure players near the court are included.
+            - Only players whose foot positions are inside the buffer zone are considered.
+            - The selection is based on the minimum distance from each player's foot position to any court keypoint.
         """
+
+        # Normalize court corner keypoints into (x, y) float tuples so point_in_polygon can unpack them
+        court_corners = []
+
+        # Ray casting algorithm requires the polygon vertices to be ordered. Using counter-clockwise [0,11, 13, 2]
+        for i in [0, 11, 13, 2]:
+            try:
+                kp = court_keypoints[i]
+            except Exception:
+                raise ValueError(f"court_keypoints missing index {i}: {court_keypoints}")
+
+            if isinstance(kp, dict):
+                try:
+                    x = float(kp.get("x"))
+                    y = float(kp.get("y"))
+                except Exception:
+                    raise ValueError(f"Invalid keypoint at index {i}: {kp}")
+                court_corners.append((x, y))
+            else:
+                try:
+                    x, y = kp[0], kp[1]
+                    court_corners.append((float(x), float(y)))
+                except Exception:
+                    raise ValueError(f"Invalid keypoint format at index {i}: {kp}")
+
+        # create a buffered polygon (20% larger) and use it for inside-court checks
+        buffer_zone_corners = self.expand_buffer_zone_polygon(court_corners, scale=1.2)
+
         distances = []
         for track_id, bbox in player_dict.items():
 
-            # get the center of the player bounding box
-            player_center = get_center_of_bbox(bbox)
+            # get the player foot position
+            player_foot_position = get_foot_position(bbox)
 
-            # Calculate the distance from the player center to each court keypoint
+            # Check if the player's foot is inside the court + buffer zone polygon
+            if not self.point_in_polygon(player_foot_position, buffer_zone_corners):
+                continue
+
+            # Calculate the distance from the player foot position to each court keypoint
             min_distance = float('inf')
 
             # Loop through the court keypoints and calculate the distance. Court keypoints are in the format [x1, y1, x2, y2, ...] so we skip every 2nd element
@@ -41,12 +159,13 @@ class PlayerTracker:
                     court_keypoint = (kp['x'], kp['y'])
                 else:
                     court_keypoint = kp  # fallback if already a tuple/list
-                distance = measure_distance(player_center, court_keypoint)
+                distance = measure_distance(player_foot_position, court_keypoint)
                 if distance < min_distance:
                     min_distance = distance
+
             distances.append((track_id, min_distance))
 
-        # sorrt the distances in ascending order
+        # sort the distances in ascending order
         distances.sort(key = lambda x: x[1])
 
         # Choose the first 4 players with the smallest distances
@@ -190,66 +309,53 @@ class PlayerTracker:
 
         return player_detections
 
-    # def _draw_ellipse(
-    #     self,
-    #     frame: 'np.ndarray',
-    #     bbox: tuple[int, int, int, int],
-    #     color: tuple[int, int, int],
-    # ) -> 'np.ndarray':
+    def _draw_ellipse(
+        self,
+        frame: 'np.ndarray',
+        bbox: tuple[int, int, int, int],
+        color: tuple[int, int, int],
+    ) -> 'np.ndarray':
 
-    #     x1, y1, x2, y2 = map(int, bbox)
-    #     x_center, y_center = get_center_of_bbox(bbox)
-    #     width = get_bbox_width(bbox)
+        x1, y1, x2, y2 = map(int, bbox)
+        x_center, y_center = get_center_of_bbox(bbox)
+        width = get_bbox_width(bbox)
 
-    #     ###
-    #     # Drawing the ellipse to represent the player or referee
-    #     ###
+        ###
+        # Drawing the ellipse to represent the player or referee
+        ###
 
-    #     # Define ellipse parameters
-    #     axes_length = (int(width), int(0.35*width))
-    #     angle = 0
-    #     # Ellipse is drawn from start_angle to end_angle. Draw -45 - 235 degrees for players to stand out
-    #     start_angle = -45
-    #     end_angle = 235
-    #     thickness = 2
-    #     line_type = cv2.LINE_4
+        # Define ellipse parameters
+        axes_length = (int(width), int(0.35*width))
+        angle = 0
+        # Ellipse is drawn from start_angle to end_angle. Draw -45 - 235 degrees for players to stand out
+        start_angle = -45
+        end_angle = 235
+        thickness = 2
+        line_type = cv2.LINE_4
 
-    #     # Draw the ellipse on the frame
-    #     cv2.ellipse(frame, (x_center, y2), axes_length, angle, start_angle, end_angle, color, thickness, line_type)
+        # Draw the ellipse on the frame
+        cv2.ellipse(frame, (int(x_center), int(y2)), axes_length, angle, start_angle, end_angle, color, thickness, line_type)
 
-    #     ###
-    #     # Drawing the rectangle place the player number
-    #     ###
+        ###
+        # Drawing the rectangle place the player number
+        ###
 
-    #     # Define rectangle parameters
-    #     rectangle_width = 40
-    #     rectangle_height = 20
+        # Define rectangle parameters
+        rectangle_width = 40
+        rectangle_height = 20
 
-    #     rectangle_x1 = x_center - rectangle_width // 2
-    #     rectangle_y1 = (y2- rectangle_height//2) +15
-    #     rectangle_x2 = x_center + rectangle_width//2
-    #     rectangle_y2 = (y2+ rectangle_height//2) +15
+        rectangle_x1 = x_center - rectangle_width // 2
+        rectangle_y1 = (y2- rectangle_height//2) +15
+        rectangle_x2 = x_center + rectangle_width//2
+        rectangle_y2 = (y2+ rectangle_height//2) +15
 
-    #     # Define text parameters
-    #     font = cv2.FONT_HERSHEY_SIMPLEX
-    #     font_scale = 0.6
-    #     color_text = (0, 0, 0)  # Black color for text
-    #     thickness = 2
+        # Define text parameters
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.6
+        color_text = (0, 0, 0)  # Black color for text
+        thickness = 2
 
-
-    #     if track_id is not None:
-    #         # Draw the rectangle on the frame
-    #         cv2.rectangle(frame, (int(rectangle_x1), int(rectangle_y1)), (int(rectangle_x2), int(rectangle_y2)), color, cv2.FILLED)
-
-    #         # Calculate position to center the text in the rectangle
-    #         x1_text = rectangle_x1 + 12
-    #         if track_id >= 99:
-    #             x1_text -= 10
-
-    #         # Put the track ID text on the rectangle
-    #         cv2.putText(frame, str(track_id), (int(x1_text), int(rectangle_y1 + 15)), font, font_scale, color_text, thickness)
-
-    #     return frame
+        return frame
 
     def draw_bounding_boxes(
         self,
@@ -276,9 +382,12 @@ class PlayerTracker:
                 # Extract coordinates from the bounding box
                 x1, y1, x2, y2 = bbox
 
+                # Draw an ellipse to represent the player
+                frame = self._draw_ellipse(frame, (int(x1), int(y1), int(x2), int(y2)), (0, 255, 0))
+
                 # Draw the bounding box and player ID on the frame
-                cv2.putText(frame, f"Player ID: {track_id}",(int(bbox[0]),int(bbox[1] -10 )),cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
-                cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
+                # cv2.putText(frame, f"Player ID: {track_id}",(int(bbox[0]),int(bbox[1] -10 )),cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
+                # cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
             output_video_frames.append(frame)
 
         return output_video_frames
