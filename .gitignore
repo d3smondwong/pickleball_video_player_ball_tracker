@@ -9,11 +9,12 @@ runs/
 # hydra logs
 hydra_logs/
 
-# models
+# data
 data/artifacts/models/
 data/artifacts/tracker_stubs/
 data/output_videos/
 data/input_videos/
+data/court_keypoints/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
