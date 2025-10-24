@@ -127,7 +127,7 @@ class BallTracker:
 
         # Draw the triangle on the frame
         cv2.fillPoly(frame, [triangle_points], color)
-        cv2.polylines(frame, [triangle_points], isClosed=True, color=(0, 0, 0), thickness=1)
+        cv2.polylines(frame, [triangle_points], isClosed=True, color=(0, 0, 255), thickness=1)
 
         return frame
 
@@ -151,11 +151,11 @@ class BallTracker:
 
                 # radius based on bbox size (adjust factor as needed)
                 radius = max(2, int(max(width, height) * 0.4))
-                cv2.circle(frame, (center_x, center_y), radius, (0, 255, 255), 1)
+                cv2.circle(frame, (center_x, center_y), radius, (0, 0, 255), 1) # Red Circle
 
             # Draw triangle to annotate ball
             for track_id, bbox in ball_dict.items():
-                frame = self._draw_triangle(frame, bbox,(0,255,255))
+                frame = self._draw_triangle(frame, bbox,(0, 0, 255))  # Red triangle
 
             output_video_frames.append(frame)
 
