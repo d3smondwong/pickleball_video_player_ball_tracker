@@ -12,6 +12,10 @@ court_keypoints:
   court_keypoints_folder: "data/court_keypoints/"
   court_keypoints_filename: "court_keypoints_{video_filename_stem}.json"
 
+homography:
+  homography_matrix_folder: "data/artifacts/homography_matrices/"
+  homography_matrix_filename: "homography_matrix_{video_filename_stem}.pkl"
+
 models:
   model_folder: "data/artifacts/models/"
   yolo12x: "yolo12x.pt"
@@ -22,24 +26,17 @@ stubs:
   player_detections_stub: "player_detections_{video_filename_stem}.pkl"
   ball_detections_stub: "ball_detections_{video_filename_stem}.pkl"
 
-court_dimensions:
-  court_width_m: 6.1  # Width of a pickleball court in meters
-  court_length_m: 13.41  # Length of a pickleball court in meters
-  kitchen_line_from_net_m: 2.13  # Distance from net to kitchen line in meters
-  kitchen_line_from_baseline_m: 4.57  # Distance from baseline to kitchen line in meters
-  side_line_from_center_m: 3.05  # Distance from center to side line in meters
-  net_height_m: 0.914  # Height of the net at the center in meters
-
+# Height is in feet
 player_details:
   player_1:
-    height: 1.75
-    name: "Player 1"
+    height: 5.74
+    name: "Parenteau"
   player_2:
-    height: 1.80
-    name: "Player 2"
+    height: 5.92
+    name: "McGuffin"
   player_3:
-    height: 1.70
-    name: "Player 3"
+    height: 5.58
+    name: "Todd"
   player_4:
-    height: 1.85
-    name: "Player 4"
+    height: 6.07
+    name: "Newman"
