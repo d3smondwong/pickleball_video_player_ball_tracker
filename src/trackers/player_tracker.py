@@ -118,8 +118,8 @@ class PlayerTracker:
         # Normalize court corner keypoints into (x, y) float tuples so point_in_polygon can unpack them
         court_corners = []
 
-        # Ray casting algorithm requires the polygon vertices to be ordered. Using counter-clockwise [0,11, 13, 2]
-        for i in [0, 11, 13, 2]:
+        # Ray casting algorithm requires the polygon vertices to be ordered. Using counter-clockwise [0, 1, 2, 3]
+        for i in [0, 1, 2, 3]:
             try:
                 kp = court_keypoints[i]
             except Exception:
