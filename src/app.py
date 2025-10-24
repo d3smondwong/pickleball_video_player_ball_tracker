@@ -72,14 +72,12 @@ def main(cfg: DictConfig):
     ###
     # Track the player using yolo12x
     ###
-    # Load the bytetrack config from cfg
-    bytetrack_cfg_path = Path("config/bytetrack.yaml")
 
     # Load model and initiate PlayerTracker to track players for different frames
     model_folder = cfg.models.model_folder
     model_filename = cfg.models.yolo12x
     model_path = Path(model_folder) / model_filename
-    player_tracker = PlayerTracker(model_path=str(model_path), tracker_cfg_path=bytetrack_cfg_path)
+    player_tracker = PlayerTracker(model_path=str(model_path), cfg=cfg)
 
     stub_folder = cfg.stubs.stub_folder
 
@@ -165,7 +163,7 @@ def main(cfg: DictConfig):
     ###
     # Minicourt
     ###
-    player_heights = cfg.players.heights
+    # player_heights = cfg.players.heights
     mini_court = MiniCourt(video_frames[0])
 
     # Convert positions to mini court positions
