@@ -12,10 +12,6 @@ court_keypoints:
   court_keypoints_folder: "data/court_keypoints/"
   court_keypoints_filename: "court_keypoints_{video_filename_stem}.json"
 
-homography:
-  homography_matrix_folder: "data/artifacts/homography_matrices/"
-  homography_matrix_filename: "homography_matrix_{video_filename_stem}.pkl"
-
 models:
   model_folder: "data/artifacts/models/"
   yolo12x: "yolo12x.pt"
