@@ -22,7 +22,7 @@ stubs:
   player_detections_stub: "player_detections_{video_filename_stem}.pkl"
   ball_detections_stub: "ball_detections_{video_filename_stem}.pkl"
 
-# Height is in feet. player_id input manually for now.
+# Height is in feet. player_id used for showing the name of players on annotation. input manually for now.
 player_details:
   player_1:
     height: 5.74
