@@ -4,15 +4,46 @@ import cv2
 import logging
 
 from pathlib import Path
+from omegaconf import DictConfig, OmegaConf
 from ultralytics import YOLO
 from src.utils.bbox_utils import measure_distance, get_center_of_bbox, get_bbox_width, get_foot_position, measure_xy_distance
 
 # Set up logging
 logger = logging.getLogger(__name__)
 class PlayerTracker:
-    def __init__(self, model_path: str, tracker_cfg_path: Path):
+    def __init__(self, model_path: str, cfg: DictConfig):
         self.model = YOLO(model_path)
-        self.tracker_cfg_path = tracker_cfg_path
+        self.tracker_cfg = cfg.player_tracker
+        self.player_names = self._parse_player_names_from_cfg(cfg)
+
+    @staticmethod
+    def _parse_player_names_from_cfg(cfg: DictConfig) -> dict[int, str]:
+        """
+        Convert cfg.player_details (DictConfig) into a mapping {player_id: name}.
+        Handles either explicit 'player_id' field or keys like 'player_1'.
+        """
+        if cfg is None or getattr(cfg, "player_details", None) is None:
+            return {}
+
+        pd = OmegaConf.to_container(cfg.player_details, resolve=True)
+        names: dict[int, str] = {}
+        for key, val in pd.items():
+            try:
+                pid = val.get("player_id")
+                if pid is None:
+                    m = re.search(r'(\d+)$', str(key))
+                    if not m:
+                        continue
+                    pid = int(m.group(1))
+                else:
+                    pid = int(pid)
+                name = val.get("name")
+                if name:
+                    names[pid] = str(name)
+            except Exception:
+                continue
+        return names
+
 
     def point_in_polygon(self, point: tuple[float, float], polygon_vertices: list[tuple[float, float]]) -> bool:
         """
@@ -216,7 +247,7 @@ class PlayerTracker:
         """
 
         # Detect the items (eg. person) in the frame using the YOLO model
-        results = self.model.track(frame, persist=True, tracker=self.tracker_cfg_path)[0]
+        results = self.model.track(frame, persist=True, tracker=self.tracker_cfg)[0]
 
         # Extract the bounding boxes and their track IDs
         id_name_dict = results.names
@@ -316,6 +347,7 @@ class PlayerTracker:
         frame: 'np.ndarray',
         bbox: tuple[int, int, int, int],
         color: tuple[int, int, int],
+        track_id: int | None
     ) -> 'np.ndarray':
 
         x1, y1, x2, y2 = map(int, bbox)
@@ -343,19 +375,37 @@ class PlayerTracker:
         ###
 
         # Define rectangle parameters
-        rectangle_width = 40
-        rectangle_height = 20
+        rectangle_width = max(60, int(width * 0.8))
+        rectangle_height = max(20, int(width * 0.30))
 
-        rectangle_x1 = x_center - rectangle_width // 2
-        rectangle_y1 = (y2- rectangle_height//2) +15
-        rectangle_x2 = x_center + rectangle_width//2
-        rectangle_y2 = (y2+ rectangle_height//2) +15
+        # Position rectangle slightly below the player's feet
+        rectangle_x1 = int(x_center - rectangle_width // 2)
+        rectangle_y1 = int(y2 + 6)
+        rectangle_x2 = int(x_center + rectangle_width // 2)
+        rectangle_y2 = int(rectangle_y1 + rectangle_height)
 
-        # Define text parameters
+        # Text parameters for player id/name
         font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.6
-        color_text = (0, 0, 0)  # Black color for text
-        thickness = 2
+        font_scale = max(0.4, min(0.8, width / 200.0))
+        color_text = (0, 0, 0)
+        thickness_text = 2
+
+        # Draw rectangle and player id/name if provided
+        if track_id is not None:
+            # Draw filled rectangle as background for text
+            cv2.rectangle(frame, (rectangle_x1, rectangle_y1), (rectangle_x2, rectangle_y2), color, cv2.FILLED)
+
+            # Determine display text: prefer configured player name, fallback to numeric id
+            display_text = self.player_names.get(track_id, str(track_id))
+
+            # Center text horizontally in the rectangle and clamp inside boundaries
+            (text_w, text_h), _ = cv2.getTextSize(display_text, font, font_scale, thickness_text)
+            x_text = int(x_center - text_w // 2)
+            x_text = max(rectangle_x1 + 2, min(x_text, rectangle_x2 - text_w - 2))
+            y_text = int(rectangle_y1 + (rectangle_height + text_h) // 2)
+
+            # Draw the text
+            cv2.putText(frame, display_text, (x_text, y_text), font, font_scale, color_text, thickness_text)
 
         return frame
 
@@ -385,11 +435,11 @@ class PlayerTracker:
                 x1, y1, x2, y2 = bbox
 
                 # Draw an ellipse to represent the player
-                frame = self._draw_ellipse(frame, (int(x1), int(y1), int(x2), int(y2)), (0, 255, 0))
+                frame = self._draw_ellipse(frame, (int(x1), int(y1), int(x2), int(y2)), (0, 255, 0), track_id)
 
-                # Draw the bounding box and player ID on the frame
-                cv2.putText(frame, f"Player ID: {track_id}",(int(bbox[0]),int(bbox[1] -10 )),cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
-                cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
+                # Draw the bounding box and player ID on the frame. Using Red Bounding Box
+                # cv2.putText(frame, f"Player ID: {track_id}",(int(bbox[0]),int(bbox[1] -10 )),cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 0, 255), 2)
+                # cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 0, 255), 2)
             output_video_frames.append(frame)
 
         return output_video_frames
