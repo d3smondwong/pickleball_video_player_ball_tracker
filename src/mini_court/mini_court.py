@@ -1,9 +1,12 @@
+import re
 import cv2
 import logging
 import numpy as np
 from pathlib import Path
 import pickle
 from typing import Tuple, List, Dict, Union
+
+from omegaconf import DictConfig, OmegaConf
 
 from src.utils.conversions import (
     convert_feet_to_pixel_distance,
@@ -23,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 
 class MiniCourt:
-    def __init__(self, frame: np.ndarray):
+    def __init__(self, frame: np.ndarray, cfg: DictConfig):
 
         # Unit Conversion Constants
         self.FEET_TO_METERS = 0.3048  # 1 foot = 0.3048 meters
@@ -82,6 +85,36 @@ class MiniCourt:
         self.set_white_canvas_position(frame)
         self.set_mini_court_position()
         self.set_court_drawing_key_points()
+
+        self.player_names = self._parse_player_names_from_cfg(cfg)
+
+    @staticmethod
+    def _parse_player_names_from_cfg(cfg: DictConfig) -> dict[int, str]:
+        """
+        Convert cfg.player_details (DictConfig) into a mapping {player_id: name}.
+        Handles either explicit 'player_id' field or keys like 'player_1'.
+        """
+        if cfg is None or getattr(cfg, "player_details", None) is None:
+            return {}
+
+        pd = OmegaConf.to_container(cfg.player_details, resolve=True)
+        names: dict[int, str] = {}
+        for key, val in pd.items():
+            try:
+                pid = val.get("player_id")
+                if pid is None:
+                    m = re.search(r'(\d+)$', str(key))
+                    if not m:
+                        continue
+                    pid = int(m.group(1))
+                else:
+                    pid = int(pid)
+                name = val.get("name")
+                if name:
+                    names[pid] = str(name)
+            except Exception:
+                continue
+        return names
 
     # -----------------------------------------------------------
     # 1. SETUP METHODS (Positioning and Coordinates) -
@@ -665,7 +698,7 @@ class MiniCourt:
         color: tuple = (255, 0, 0),
     ) -> list[np.ndarray]:
         """
-        Draws points (Players and Ball) and object IDs on each frame of a mini court visualization.
+        Draws points (Players and Ball). If there is a player name in the config, use it. Else use object IDs on each frame of a mini court visualization.
         Args:
             frames (list of np.ndarray): List of image frames to draw on.
             metric_data (list of dict): List where each element corresponds to a frame and contains a dictionary mapping object IDs to their metrics, including 'mini_court_pos' (tuple of x, y coordinates).
@@ -684,14 +717,20 @@ class MiniCourt:
                     y = int(y)
                     cv2.circle(frame, (x, y), 5, color, -1)
 
-                    # Add ID label for clarity
+                    # Use configured name if available, otherwise fallback to id
+                    try:
+                        pid = int(object_id)
+                    except Exception:
+                        pid = object_id
+                    display_text = self.player_names.get(pid, str(object_id))
+
                     cv2.putText(
                         frame,
-                        str(object_id),
+                        display_text,
                         (x + 8, y + 5),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         0.4,
-                        color,
+                        (0, 0, 0), # use black
                         1,
                         cv2.LINE_AA,
                     )

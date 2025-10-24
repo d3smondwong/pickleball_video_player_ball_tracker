@@ -164,7 +164,7 @@ def main(cfg: DictConfig):
     # Minicourt
     ###
     # player_heights = cfg.players.heights
-    mini_court = MiniCourt(video_frames[0])
+    mini_court = MiniCourt(video_frames[0], cfg)
 
     # Convert positions to mini court positions
     player_mini_court_detections, ball_mini_court_detections = mini_court.convert_bounding_boxes_to_mini_court_coordinates(player_detections,
