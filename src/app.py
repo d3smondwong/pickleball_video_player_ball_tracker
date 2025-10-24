@@ -13,24 +13,6 @@ from pathlib import Path
 from omegaconf import DictConfig, OmegaConf
 from dotenv import load_dotenv
 
-def build_kp_map(court_key_points):
-        """
-        Build a mapping from kp_id to (x, y) coordinates.
-        Accepts a list of dicts [{'kp_id':..., 'x':..., 'y':...}, ...].
-        Returns: dict[int, Tuple[float, float]]
-        """
-        kp_map = {}
-        for kp in court_key_points:
-            if kp is None:
-                continue
-            kp_id = kp.get("kp_id")
-            x = kp.get("x") if kp.get("x") is not None else kp.get("x_feet")
-            y = kp.get("y") if kp.get("y") is not None else kp.get("y_feet")
-            if kp_id is None or x is None or y is None:
-                continue
-            kp_map[int(kp_id)] = (float(x), float(y))
-        return kp_map
-
 @hydra.main(config_path="../config", config_name="app.yaml", version_base="1.2")
 def main(cfg: DictConfig):
     """
@@ -163,7 +145,6 @@ def main(cfg: DictConfig):
     ###
     # Minicourt
     ###
-    # player_heights = cfg.players.heights
     mini_court = MiniCourt(video_frames[0], cfg)
 
     # Convert positions to mini court positions
@@ -178,9 +159,9 @@ def main(cfg: DictConfig):
     output_video_frames = player_tracker.draw_bounding_boxes(video_frames, player_detections)
     output_video_frames= ball_tracker.draw_bounding_boxes(output_video_frames, ball_detections)
 
-    # Draw the court keypoints on the output video frames. Not drawing for now as the keypoints model is not very accurate
-    court_line_detector = CourtLineDetector()
-    output_video_frames = court_line_detector.draw_keypoints_on_video(output_video_frames, court_keypoints)
+    # Draw the court keypoints on the output video frames. Used only for development purposes
+    # court_line_detector = CourtLineDetector()
+    # output_video_frames = court_line_detector.draw_keypoints_on_video(output_video_frames, court_keypoints)
 
     # Draw Mini Court
     output_video_frames = mini_court.draw_mini_court_on_frames(output_video_frames)
@@ -189,7 +170,7 @@ def main(cfg: DictConfig):
     output_video_frames = mini_court.draw_points_on_mini_court(output_video_frames, player_mini_court_detections, color=(0, 255, 0))
     output_video_frames = mini_court.draw_points_on_mini_court(output_video_frames, ball_mini_court_detections, color=(0, 0, 255))
 
-    # Annotate the main video frames with the frame number
+    # Annotate the main video frames with the frame number. Used only for development purposes
     # final_annotated_frames = []
     # for frame_idx, frame in enumerate(output_video_frames):
     #     # Frame number stays on top left
