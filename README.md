@@ -1,12 +1,12 @@
 # Pickleball Player and Ball Tracker
 
-This application analyzes pickleball videos to automatically track player movements and ball trajectories using computer vision. It leverages the YOLOv12x model for player detection and a custom ball tracking model trained on Roboflow.
+This application analyzes pickleball videos to automatically track player movements and ball trajectories using computer vision. It leverages the YOLOv12x model for player detection and a custom ball tracking model trained on Roboflow. Using the dynamic detections, the application maps real-world position of the player and ball onto a 2d mini-court using a homography matrix and perspective techniques for an interactive visualisation.
 
 ### Use Case
 
 Accurate tracking of players and the ball enables detailed analysis of individual performance and match dynamics. With reliable detection of court keypoints, the application can generate actionable insights and visualizations to help players improve their gameplay and strategy.
 
-**Current Limitation:** Court keypoint detection is not yet robust, resulting in less accurate distance and velocity calculations. We will remove this feature for now.
+**Current Limitation:** Court keypoint detection is not yet robust. We will remove this feature for now.
 
 **Use Case example**
 
@@ -28,22 +28,26 @@ Accurate tracking of players and the ball enables detailed analysis of individua
 ├── requirements.txt
 ├── demo_assets
 |   └── pickleball_highlights_output.gif
-├── artifacts
-│   ├── models
-│   └── tracker_stubs
-├── input_videos
-├── output_videos
-├── runs
+├── analysis
+|   └── ball_analysis.ipynb
+├── data
+│   ├── artifacts
+│   │   ├── models
+│   │   └── tracker_stubs
+│   ├── input_videos
+│   └── output_videos
 ├── src
 │   ├── court_line_detector
-│   │   ├── __init__.py
 │   │   └── court_line_detector.py
+│   ├── mini_court
+│   │   └── mini_court.py
 │   ├── trackers
 │   │   ├── __init__.py
 │   │   ├── ball_tracker.py
 │   │   └── player_tracker.py
 │   ├── utils
 │   │   ├── __init__.py
+│   │   ├── conversions.py
 │   │   ├── bbox_utils.py
 │   │   └── video_utils.py
 │   ├── app.py
@@ -61,21 +65,29 @@ Accurate tracking of players and the ball enables detailed analysis of individua
 
     Reads frames from an input video file and prepares them for analysis.
 
-2. Detection:
+2. Detection and tracking:
 
-    `player`: Uses Yolo12x model to detect human in frames
+    `player`: Uses Yolo12x model to detect human in frames. It then uses ByteTrack to track players across the frames.
 
-    `ball`: Uses a custom trained Yolo11x model to detect the ball in frames. Training was done on Roboflow and is publicly available via  `model_id = pickleball-vision/6`
+    `ball`: Uses a custom trained Yolo12x model to detect the ball in frames. Training was done on Roboflow and is publicly available via  `model_id = pickleball-vision/6`
 
-    `court`: Uses a custom trained Yolo11x model and Yolo11 model. Court keypoint is not robust at the moment.
+    `court`: Uses a custom trained Yolo11x model and Yolo11 model. Court keypoint detection is not robust at the moment. More training data for finetuning is required.
 
 3. Detection Results:
 
     Saves the detections onto a stub file for efficiency. When the video (with the same file name) is run again, it loads the stub file to save inference and processing time.
 
-4. Filtering and Annotation
+4. Filtering and annotation
 
-    Filters player detections to focus on the 4 human closest to the court, and draws bounding boxes and frame numbers on the output frames.
+   `player`: Filters player detections to focus on the 4 human detected whose foot positions are closes to the court keypoints and within the defined court polygon calculated using Ray Casting algorithm. Custom annotations using an elipse at the players foot position and player's name are drawn for the players.
+
+   `ball`: Custom annotation using a triangle to track the ball across frames
+
+5. Mini-court
+
+    `mini-court`: Draw a mini pickleball court on the frames
+
+    `Coordinate conversion`: Use a homography matrix to map the ball to pixels on the mini-court from real-world perspective and court keypoints perspective transformation to calculate players position on the mini-court.
 
 5. Video Output
 
