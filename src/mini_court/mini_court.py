@@ -662,31 +662,6 @@ class MiniCourt:
         distance_feet = np.linalg.norm(p1 - p2)
         return float(distance_feet)
 
-    def calculate_speed_kph(self, distance_feet: float, frame_rate: int) -> float:
-        """
-        Calculates speed in Kilometers Per Hour (kph).
-
-        Args:
-            distance_feet (float): Distance covered in feet over one frame.
-            frame_rate (int): Frames per second (FPS) of the video.
-
-        Returns:
-            float: Speed in km/h.
-        """
-        # Convert distance from feet to meters
-        distance_meters = distance_feet * self.FEET_TO_METERS
-
-        # Time taken for one frame (in seconds)
-        time_seconds = 1.0 / frame_rate
-
-        # Speed in meters per second (m/s)
-        speed_mps = distance_meters / time_seconds
-
-        # Convert m/s to km/h
-        speed_kph = speed_mps * self.KPH_FACTOR
-
-        return speed_kph
-
     # -----------------------------------------------------------
     # 4. Drawing the objects on the mini-court
     # -----------------------------------------------------------
