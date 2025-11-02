@@ -79,7 +79,7 @@ Accurate tracking of players and the ball enables detailed analysis of individua
 
 4. Filtering and annotation
 
-   `player`: Filters player detections to focus on the 4 human detected whose foot positions are closes to the court keypoints and within the defined court polygon calculated using Ray Casting algorithm. Custom annotations using an elipse at the players foot position and player's name are drawn for the players.
+   `player`: Filters player detections to focus on the 4 human detected. This is done using the foot positions which are closes to the court keypoints and within the defined court polygon calculated using Ray Casting algorithm. Custom annotations using an elipse at the players foot position and player's name are drawn for the players.
 
    `ball`: Custom annotation using a triangle to track the ball across frames
 
