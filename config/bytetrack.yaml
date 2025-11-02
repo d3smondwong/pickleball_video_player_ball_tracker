@@ -1,7 +1,0 @@
-tracker_type: bytetrack
-track_high_thresh: 0.5   # Detection confidence threshold for confirmed tracks
-track_low_thresh: 0.2     # Detection confidence threshold for tentative (low-score) tracks
-new_track_thresh: 0.6 # Minimum detection score to initialize a new track
-track_buffer: 60    # Number of frames before a lost track is removed (crucial for re-identification)
-match_thresh: 0.8   # IoU threshold for matching confirmed tracks
-fuse_score: True  # Whether to use detection scores to refine track confidence (helps reduce false positives)
