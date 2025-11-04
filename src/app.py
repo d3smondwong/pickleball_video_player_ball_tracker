@@ -9,6 +9,7 @@ from src.mini_court.mini_court import MiniCourt
 from src.utils.video_utils import read_video, save_video
 from src.trackers import PlayerTracker, BallTracker
 from src.court_line_detector.court_line_detector import CourtLineDetector
+from src.player_stats.player_stats import PlayerStats
 from pathlib import Path
 from omegaconf import DictConfig, OmegaConf
 from dotenv import load_dotenv
@@ -109,8 +110,8 @@ def main(cfg: DictConfig):
                                                  stub_path=ball_detections_stub_path
                                                  )
 
-    # To interpolate the ball positions when it is not detected in some frames. Does not work well as there are times it goes out of the camera during lobs
-    # ball_detections = ball_tracker.interpolate_ball_positions(ball_detections)
+    # To interpolate the ball positions when it is not detected in some frames.
+    ball_detections = ball_tracker.interpolate_ball_positions(ball_detections)
 
     ###
     # Detect the court lines using the CourtLineDetector
@@ -170,14 +171,21 @@ def main(cfg: DictConfig):
     output_video_frames = mini_court.draw_points_on_mini_court(output_video_frames, player_mini_court_detections, color=(0, 255, 0))
     output_video_frames = mini_court.draw_points_on_mini_court(output_video_frames, ball_mini_court_detections, color=(0, 0, 255))
 
-    # Annotate the main video frames with the frame number. Used only for development purposes
-    # final_annotated_frames = []
-    # for frame_idx, frame in enumerate(output_video_frames):
-    #     # Frame number stays on top left
-    #     cv2.putText(frame, f"Frame: {frame_idx}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-    #     final_annotated_frames.append(frame)
+    ###
+    # Player Stats
+    ###
+    # logger.info(f'Ball positions for player stats: {ball_detections}')
+    player_stats = PlayerStats()
+    player_stats.run_player_stats(ball_detections, player_detections)
 
-    # output_video_frames = final_annotated_frames
+    # Annotate the main video frames with the frame number. Used only for development purposes
+    final_annotated_frames = []
+    for frame_idx, frame in enumerate(output_video_frames):
+        # Frame number stays on top left
+        cv2.putText(frame, f"Frame: {frame_idx}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        final_annotated_frames.append(frame)
+
+    output_video_frames = final_annotated_frames
 
     ###
     # Save video frames to the output video file
