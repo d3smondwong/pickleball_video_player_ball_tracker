@@ -14,6 +14,7 @@ from pathlib import Path
 from omegaconf import DictConfig, OmegaConf
 from dotenv import load_dotenv
 
+
 @hydra.main(config_path="../config", config_name="app.yaml", version_base="1.2")
 def main(cfg: DictConfig):
     """
@@ -45,8 +46,10 @@ def main(cfg: DictConfig):
         logger.error(f"Input video file not found: {input_video_path}")
     if not input_video_path.is_file():
         logger.error(f"Input path is not a file: {input_video_path}")
-    if not input_video_path.suffix.lower() in ['.mp4', '.avi', '.mov']:
-        logger.error(f"Unsupported video file format: {input_video_path.suffix}. Supported formats are .mp4, .avi, .mov.")
+    if not input_video_path.suffix.lower() in [".mp4", ".avi", ".mov"]:
+        logger.error(
+            f"Unsupported video file format: {input_video_path.suffix}. Supported formats are .mp4, .avi, .mov."
+        )
 
     # Read video frames
     logger.info(f"Reading video frames from: {input_video_path}")
@@ -64,21 +67,30 @@ def main(cfg: DictConfig):
 
     stub_folder = cfg.stubs.stub_folder
 
-    player_detections_stub_path = Path(stub_folder) / cfg.stubs.player_detections_stub.format(video_filename_stem=input_video_path.stem)
+    player_detections_stub_path = Path(
+        stub_folder
+    ) / cfg.stubs.player_detections_stub.format(
+        video_filename_stem=input_video_path.stem
+    )
 
     # Save players detected into a Pickle file. To prevent multiple processing in production
     # Check if the pickle file exists, if not, it will be created
     if not Path(player_detections_stub_path).exists():
-        logger.info(f"Stub file not found, it will be created: {player_detections_stub_path}")
+        logger.info(
+            f"Stub file not found, it will be created: {player_detections_stub_path}"
+        )
         read_from_stub = False
     else:
-        logger.info(f"Loading player detections from stub file: {player_detections_stub_path}")
+        logger.info(
+            f"Loading player detections from stub file: {player_detections_stub_path}"
+        )
         read_from_stub = True
 
-    player_detections = player_tracker.detect_frames(video_frames,
-                                                     read_from_stub=read_from_stub,
-                                                     stub_path=player_detections_stub_path
-                                                     )
+    player_detections = player_tracker.detect_frames(
+        video_frames,
+        read_from_stub=read_from_stub,
+        stub_path=player_detections_stub_path,
+    )
 
     ###
     # Track the ball using model trained on Roboflow
@@ -94,21 +106,26 @@ def main(cfg: DictConfig):
 
     ball_tracker = BallTracker(api_key=api_key, model_id=model_id)
 
-    ball_detections_stub_path = Path(stub_folder) / cfg.stubs.ball_detections_stub.format(video_filename_stem=input_video_path.stem)
+    ball_detections_stub_path = Path(
+        stub_folder
+    ) / cfg.stubs.ball_detections_stub.format(video_filename_stem=input_video_path.stem)
 
     # Save balls detection into a Pickle file. To prevent multiple processing in production
     # Check if the pickle file exists, if not, it will be created
     if not Path(ball_detections_stub_path).exists():
-        logger.info(f"Stub file not found, it will be created: {ball_detections_stub_path}")
+        logger.info(
+            f"Stub file not found, it will be created: {ball_detections_stub_path}"
+        )
         read_from_stub = False
     else:
-        logger.info(f"Loading ball detections from stub file: {ball_detections_stub_path}")
+        logger.info(
+            f"Loading ball detections from stub file: {ball_detections_stub_path}"
+        )
         read_from_stub = True
 
-    ball_detections = ball_tracker.detect_frames(video_frames,
-                                                 read_from_stub=read_from_stub,
-                                                 stub_path=ball_detections_stub_path
-                                                 )
+    ball_detections = ball_tracker.detect_frames(
+        video_frames, read_from_stub=read_from_stub, stub_path=ball_detections_stub_path
+    )
 
     # To interpolate the ball positions when it is not detected in some frames.
     ball_detections = ball_tracker.interpolate_ball_positions(ball_detections)
@@ -131,17 +148,23 @@ def main(cfg: DictConfig):
     # Court keypoints calculated manually for now as both roboflow and custom trained model are not very accurate
 
     court_keypoints_folder = cfg.court_keypoints.court_keypoints_folder
-    court_keypoints_filename = cfg.court_keypoints.court_keypoints_filename.format(video_filename_stem=input_video_path.stem)
-    logger.info(f'Loading court keypoints from: {court_keypoints_filename}')
+    court_keypoints_filename = cfg.court_keypoints.court_keypoints_filename.format(
+        video_filename_stem=input_video_path.stem
+    )
+    logger.info(f"Loading court keypoints from: {court_keypoints_filename}")
     court_keypoints_path = Path(court_keypoints_folder) / court_keypoints_filename
 
     if not court_keypoints_path.exists():
-        raise FileNotFoundError(f"Court keypoints file not found: {court_keypoints_path}")
+        raise FileNotFoundError(
+            f"Court keypoints file not found: {court_keypoints_path}"
+        )
     with court_keypoints_path.open("r", encoding="utf-8") as f:
         court_keypoints = json.load(f)
 
     # Filter the player detections to only include the players on the court
-    player_detections = player_tracker.choose_and_filter_players(court_keypoints, player_detections)
+    player_detections = player_tracker.choose_and_filter_players(
+        court_keypoints, player_detections
+    )
 
     ###
     # Minicourt
@@ -149,16 +172,30 @@ def main(cfg: DictConfig):
     mini_court = MiniCourt(video_frames[0], cfg)
 
     # Convert positions to mini court positions
-    player_mini_court_detections, ball_mini_court_detections = mini_court.convert_bounding_boxes_to_mini_court_coordinates(player_detections,
-                                                                                                                           ball_detections,
-                                                                                                                           court_keypoints)
+    player_mini_court_detections, ball_mini_court_detections = (
+        mini_court.convert_bounding_boxes_to_mini_court_coordinates(
+            player_detections, ball_detections, court_keypoints
+        )
+    )
+
+    ###
+    # Player Stats
+    ###
+    player_stats = PlayerStats(cfg)
+    ball_hits_df = player_stats.run_ball_hits_df(
+        ball_detections, player_detections, max_distance_px=None
+    )
 
     ###
     # Annotate the output video frames
     ###
     # Draw bounding boxes on the video frames using the player and ball detections
-    output_video_frames = player_tracker.draw_bounding_boxes(video_frames, player_detections)
-    output_video_frames= ball_tracker.draw_bounding_boxes(output_video_frames, ball_detections)
+    output_video_frames = player_tracker.draw_bounding_boxes(
+        video_frames, player_detections
+    )
+    output_video_frames = ball_tracker.draw_bounding_boxes(
+        output_video_frames, ball_detections
+    )
 
     # Draw the court keypoints on the output video frames. Used only for development purposes
     # court_line_detector = CourtLineDetector()
@@ -168,30 +205,44 @@ def main(cfg: DictConfig):
     output_video_frames = mini_court.draw_mini_court_on_frames(output_video_frames)
 
     # Draw the player and ball positions on the mini court
-    output_video_frames = mini_court.draw_points_on_mini_court(output_video_frames, player_mini_court_detections, color=(0, 255, 0))
-    output_video_frames = mini_court.draw_points_on_mini_court(output_video_frames, ball_mini_court_detections, color=(0, 0, 255))
+    output_video_frames = mini_court.draw_points_on_mini_court(
+        output_video_frames, player_mini_court_detections, color=(0, 255, 0)
+    )
+    output_video_frames = mini_court.draw_points_on_mini_court(
+        output_video_frames, ball_mini_court_detections, color=(0, 0, 255)
+    )
 
-    ###
-    # Player Stats
-    ###
-    # logger.info(f'Ball positions for player stats: {ball_detections}')
-    player_stats = PlayerStats()
-    player_stats.run_player_stats(ball_detections, player_detections)
+    # Draw player stats on the output video frames
+    output_video_frames = player_stats.draw_player_stats(
+        output_video_frames,
+        ball_hits_df,
+        player_metrics=player_mini_court_detections,
+    )
 
     # Annotate the main video frames with the frame number. Used only for development purposes
-    final_annotated_frames = []
-    for frame_idx, frame in enumerate(output_video_frames):
-        # Frame number stays on top left
-        cv2.putText(frame, f"Frame: {frame_idx}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-        final_annotated_frames.append(frame)
+    # final_annotated_frames = []
+    # for frame_idx, frame in enumerate(output_video_frames):
+    #     # Frame number stays on top left
+    #     cv2.putText(
+    #         frame,
+    #         f"Frame: {frame_idx}",
+    #         (10, 30),
+    #         cv2.FONT_HERSHEY_SIMPLEX,
+    #         1,
+    #         (0, 255, 0),
+    #         2,
+    #     )
+    #     final_annotated_frames.append(frame)
 
-    output_video_frames = final_annotated_frames
+    # output_video_frames = final_annotated_frames
 
     ###
     # Save video frames to the output video file
     ###
     output_video_folder = cfg.videos.output_video_folder
-    output_video_path = Path(output_video_folder) / f"{input_video_path.stem}_output.avi"
+    output_video_path = (
+        Path(output_video_folder) / f"{input_video_path.stem}_output.avi"
+    )
     logger.info(f"Saving video frames to: {output_video_path}")
 
     # Check if the parent directory of the output video path exists, if not, create it
@@ -200,6 +251,7 @@ def main(cfg: DictConfig):
 
     # Save the video frames to the output video file
     save_video(output_video_frames, str(output_video_path))
+
 
 if __name__ == "__main__":
 
