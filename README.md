@@ -34,6 +34,8 @@ Accurate tracking of players and the ball enables detailed analysis of individua
 │   ├── artifacts
 │   │   ├── models
 │   │   └── tracker_stubs
+│   ├── court_keypoints
+│   │   └── court_keypoints_{video_name}.json
 │   ├── input_videos
 │   └── output_videos
 ├── src
