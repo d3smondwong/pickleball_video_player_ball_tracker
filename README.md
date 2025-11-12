@@ -1,6 +1,6 @@
 # Pickleball Player and Ball Tracker
 
-This application analyzes pickleball videos to automatically track player movements and ball trajectories using computer vision. It leverages the YOLOv12x model for player detection and a custom ball tracking model trained on Roboflow. Using the dynamic detections, the application maps real-world position of the player and ball onto a 2d mini-court using a homography matrix and perspective techniques for an interactive visualisation.
+This computer vision application automates pickleball game analysis by tracking player movements and ball trajectories. It utilizes the YOLOv12x model for robust player detection and a custom, Roboflow-trained model for ball tracking. The system then employs perspective projection to map these dynamic, real-world positions onto a 2D court model, automatically calculating in-game statistics like ball hits and player running distance for interactive visualization.
 
 ### Use Case
 
@@ -39,6 +39,8 @@ Accurate tracking of players and the ball enables detailed analysis of individua
 ├── src
 │   ├── court_line_detector
 │   │   └── court_line_detector.py
+│   ├── player_stats
+│   │   └── player_stats.py
 │   ├── mini_court
 │   │   └── mini_court.py
 │   ├── trackers
@@ -77,21 +79,33 @@ Accurate tracking of players and the ball enables detailed analysis of individua
 
     Saves the detections onto a stub file for efficiency. When the video (with the same file name) is run again, it loads the stub file to save inference and processing time.
 
-4. Filtering and annotation
-
-   `player`: Filters player detections to focus on the 4 human detected. This is done using the foot positions which are closes to the court keypoints and within the defined court polygon calculated using Ray Casting algorithm. Custom annotations using an elipse at the players foot position and player's name are drawn for the players.
-
-   `ball`: Custom annotation using a triangle to track the ball across frames
-
-5. Mini-court
+4. Mini-court
 
     `mini-court`: Draw a mini pickleball court on the frames
 
     `Coordinate conversion`: Use a homography matrix to map the ball to pixels on the mini-court from real-world perspective and court keypoints distance to calculate players position on the mini-court.
 
-5. Video Output
+5. Player statistics
+
+    Calculates the number of hits a player made and the distance the player move during the rally. Ball hits is tracked by checking a change in velocity, acceleration and distance moved. Distance is calculated by tracking the difference in foot position of the player across the frames.
+
+6. Filtering and annotation
+
+   `player`: Screen and filter the detections to focus on the 4 players. This is done using the foot positions which are closes to the court keypoints and within the defined court polygon calculated using Ray Casting algorithm. Custom annotations using an elipse at the players foot position and player's name are drawn for the players.
+
+   `ball`: Custom annotation using a triangle to track the ball across frames
+
+7. Saving detection results to a stub file
+
+    To optimize development and avoid re-running expensive detection processes, detection results (e.g., bounding boxes, object IDs, and tracking data) are saved to a JSON stub file after initial processing of the video for the first time. During subsequent runs, the script can load from this stub file, skipping detection and allowing faster iteration on downstream features like team identification and annotation.
+
+8. Video Output
 
     Saves the annotated frames as a new output video file.
+
+9. Error Handling
+
+    Throughout, the script checks for missing data and logs errors, ensuring robust execution.
 
 ### How to run this application?
 
