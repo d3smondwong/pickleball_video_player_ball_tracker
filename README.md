@@ -147,7 +147,14 @@ To run this application, follow these steps:
 
 5. Put the video you will like the application to detect the player and ball in the folder `input_videos`. Supported formats are `.mp4`, `.avi` and `.mov`
 
-6. Run the application:
+6. Add in the court_keypoints in json format with the following naming convention
+
+    ```
+    court_keypoints_{video_name}.json
+
+    ```
+
+7. Run the application:
 
     From your project's root directory in the terminal, execute:
 
